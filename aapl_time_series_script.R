@@ -1,10 +1,9 @@
 
 # load packages
-library(tidyverse) # because magic
-library(lubridate) # because dates
+library(tidyverse) 
+library(lubridate) 
 library(stats) # predict, acf, pacf, AIC fns
 library(moments) # skewness/kurtosis/jarque.test fn
-library(greybox) # ro fn
 library(zoo) # rollmean fn
 library(fUnitRoots) # adfTest fn
 library(rugarch) # ugarchspec, ugarchfit fns
@@ -17,10 +16,7 @@ aapl_daily <- read.csv("~/Econometrics/AAPL.csv")
 # SCRUB
 ################################################
 
-# ----------------------------------------------
-# this converts daily data into monthly data 
-# https://stackoverflow.com/questions/58369953/
-# ----------------------------------------------
+# convert daily data into monthly data 
 aapl_monthly <- aapl_daily %>%
   mutate(Date = ymd(Date), # convert Date to date format
          year = year(Date), # create year and month vectors
