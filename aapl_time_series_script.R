@@ -1,4 +1,3 @@
-
 # load packages
 library(tidyverse) 
 library(lubridate) 
@@ -24,7 +23,7 @@ aapl_monthly <- aapl_daily %>%
   group_by(year, month) %>% # group by year and month
   arrange(Date) %>% # arrange/sort by month desc
   filter(row_number() == max(row_number())) # select last row of month 
-# ----------------------------------------------
+
 
 aapl_monthly[,8:9] = NULL # drop year and month vectors that were just created above
 
