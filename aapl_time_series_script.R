@@ -4,8 +4,7 @@ library(lubridate)
 library(stats) # predict, acf, pacf, AIC fns
 library(moments) # skewness/kurtosis/jarque.test fn
 library(zoo) # rollmean fn
-library(fUnitRoots) # adfTest fn
-library(rugarch) # ugarchspec, ugarchfit fns
+
 
 
 # load daily stock price data from yahoo finance
@@ -81,6 +80,8 @@ which.min(aic_table[,,2]) # SBIC
 par(mfrow=c(1,2))
 acf(aapl_monthly$dclose, lag.max = 36, main = "Autocorrelation Function")
 pacf(aapl_monthly$dclose, lag.max = 36, main = "Partial Autocorrelation Function")
+
+library(fUnitRoots) # adfTest fn
 
 # test for unit root
 adfTest(aapl_monthly$dclose, lags = 36, type = "c")
