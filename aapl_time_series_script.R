@@ -120,7 +120,7 @@ arma00_fc_rolling <- aapl_monthly %>%
   mutate(fc = as.numeric(c(rep(NA, 372), rollmean(aapl_monthly$dclose, 373, align = "right"))), # create vector of NAs and predicted arma00 (mean)
          residual = as.numeric(dclose - fc), # calculate the residual 
          residual2 = as.numeric(residual^2)) %>% # calculate the residual squared
-  filter(!is.na(fc)) %>% # filter out the NAs
+  dplyr::filter(!is.na(fc)) %>% # filter out the NAs - specified dplyr as not to get an error for the base/stats filter 
   mutate(arma00_fc = as.ts(fc)) %>%
   select(Date, arma00_fc, residual, residual2) # select Date, forecasted values and residuals
 
