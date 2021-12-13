@@ -4,6 +4,7 @@ library(lubridate)
 library(stats) # predict, acf, pacf, AIC fns
 library(moments) # skewness/kurtosis/jarque.test fn
 library(zoo) # rollmean fn
+library(fUnitRoots) # adfTest fn
 
 
 
@@ -21,7 +22,7 @@ aapl_monthly <- aapl_daily %>%
          month = month(Date)) %>% 
   group_by(year, month) %>% # group by year and month
   arrange(Date) %>% # arrange/sort by month desc
-  filter(row_number() == max(row_number())) # select last row of month 
+  dplyr::filter(row_number() == max(row_number())) # select last row of month 
 
 
 aapl_monthly[,8:9] = NULL # drop year and month vectors that were just created above
@@ -68,7 +69,7 @@ for (ar in 0:3) { # index 0, should be 1 less than above
     arma <- arima(aapl_monthly$dclose[aapl_monthly$Date <= "2019-12-31"], order = c(ar, 0, ma)) # estimate model iteratively
     aic_table[ar+1, ma+1, 1] <- AIC(arma) # AIC 
     aic_table[ar+1, ma+1, 2] <- AIC(arma, k = log(nrow(aapl_monthly))) # SBIC
-  }
+  } 
 }
 
 aic_table
@@ -80,8 +81,6 @@ which.min(aic_table[,,2]) # SBIC
 par(mfrow=c(1,2))
 acf(aapl_monthly$dclose, lag.max = 36, main = "Autocorrelation Function")
 pacf(aapl_monthly$dclose, lag.max = 36, main = "Partial Autocorrelation Function")
-
-library(fUnitRoots) # adfTest fn
 
 # test for unit root
 adfTest(aapl_monthly$dclose, lags = 36, type = "c")
