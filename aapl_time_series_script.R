@@ -5,7 +5,7 @@ library(stats) # predict, acf, pacf, AIC fns
 library(moments) # skewness/kurtosis/jarque.test fn
 library(zoo) # rollmean fn
 library(fUnitRoots) # adfTest fn
-
+library(rugarch) # ugarchspec, ugarchfit fns
 
 
 # load daily stock price data from yahoo finance
@@ -36,6 +36,17 @@ aapl_monthly <- aapl_monthly[-1,] # drop NA row due to difference
 # EXPLORE
 #############################################
 
+# create scatter plot
+ggplot(aapl_monthly, aes(x = Date, y = dclose)) +
+  geom_point()
+
+
+# create histogram
+ggplot(aapl_monthly, aes(x = dclose)) +
+  geom_histogram(breaks = seq(min(aapl_monthly$dclose), max(aapl_monthly$dclose)+10, 5), 
+                 color = "black") 
+
+
 # summary statistics
 aapl_monthly_stats <- aapl_monthly %>%
   select(dclose) %>%
@@ -53,13 +64,10 @@ aapl_monthly_stats <- aapl_monthly %>%
 aapl_monthly_stats # call monthly stats
 
 
-# create histogram
-ggplot(aapl_monthly, aes(x = dclose)) +
-  geom_histogram(breaks = seq(min(aapl_monthly$dclose), max(aapl_monthly$dclose)+10, 5), 
-                 color = "black") 
-
 # formal test for normality
-jarque.test(aapl_monthly$dclose)
+jarque.test(aapl_monthly$dclose) # normality, takes skew and kurt into account, fail to reject
+agostino.test(aapl_monthly$dclose) # kurtosis test individually, fail to reject
+anscombe.test(aapl_monthly$dclose) # skewness test individually, fail to reject
 
 
 # create criterion tables
@@ -86,10 +94,11 @@ pacf(aapl_monthly$dclose, lag.max = 36, main = "Partial Autocorrelation Function
 adfTest(aapl_monthly$dclose, lags = 36, type = "c")
 
 adfgls = urersTest(aapl_monthly$dclose, type = "DF-GLS", model = "trend", lag.max = 36, doplot = FALSE)
-adfgls@test$test@teststat
 adfgls@test$test@cval
+adfgls@test$test@teststat
 
-# formal test for white noise process
+
+# formal test for autocorrelation/white noise process
 tsdiag(arima(aapl_monthly$dclose, order = c(0, 0, 0)), gof.lag = 36) 
 Box.test(aapl_monthly$dclose, lag = 36, fitdf = 0, type = "Lj") # ljung-box test
 
@@ -166,4 +175,61 @@ lines(arma00_fc_rolling$Date, arma00_fc_rolling$arma00_fc, lwd = 4, col = "blue"
 lines(arma00_fc_fixed$Date, arma00_fc_fixed$arma00_fc, lwd = 3, col = "red")
 legend("topright", legend = c("arma00_fc_fixed", "arma00_fc_rolling", "arma11_fc_fixed"), lwd = 3, col = c("red", "blue", "green"))
 
+
+
+#####################################
+#####################################
+# GARCH Models
+#####################################
+#####################################
+
+# difference daily data
+aapl_daily$dclose <- c(NA, 100*diff(log(aapl_daily$Adj.Close))) # create dclose variable to calculate returns
+aapl_daily <- aapl_daily[-1,] # drop NA row due to difference
+
+
+# create model specs
+spec_g <- ugarchspec(mean.model = list(armaOrder = c(0, 0)), variance.model = list(garchOrder = c(1, 1), model = "sGARCH"))
+spec_e <- ugarchspec(mean.model = list(armaOrder = c(0, 0)), variance.model = list(garchOrder = c(1, 1), model = "eGARCH"))
+spec_t <- ugarchspec(mean.model = list(armaOrder = c(0, 0)), variance.model = list(garchOrder = c(1, 1), model = "gjrGARCH"))
+
+
+# fit models
+garch00_fit <- ugarchfit(spec_g, data = aapl_daily$dclose, out.sample = 396)
+egarch00_fit <- ugarchfit(spec_e, data = aapl_daily$dclose, out.sample = 396)
+tgarch00_fit <- ugarchfit(spec_t, data = aapl_daily$dclose, out.sample = 396)
+
+
+# forecast models
+garch00_fc <- ugarchforecast(garch00_fit, n.ahead = 1, n.roll = 395)
+egarch00_fc <- ugarchforecast(egarch00_fit, n.ahead = 1, n.roll = 395)
+tgarch00_fc <- ugarchforecast(tgarch00_fit, n.ahead = 1, n.roll = 395)
+
+mu_g <- garch00_fit@fit$coef["mu"]
+mu_e <- egarch00_fit@fit$coef["mu"]
+mu_t <- tgarch00_fit@fit$coef["mu"]
+
+omega_g <-  garch00_fit@fit$coef["omega"]
+omega_e <- egarch00_fit@fit$coef["omega"]
+omega_t <- tgarch00_fit@fit$coef["omega"]
+
+alpha_g <- garch00_fit@fit$coef["alpha1"]
+alpha_e <- egarch00_fit@fit$coef["alpha1"]
+alpha_t <- tgarch00_fit@fit$coef["alpha1"]
+
+beta_g <- garch00_fit@fit$coef["beta1"]
+beta_e <- egarch00_fit@fit$coef["beta1"]
+beta_t <- tgarch00_fit@fit$coef["beta1"]
+
+h_g <- garch00_fit@fit$var
+h_e <- egarch00_fit@fit$var
+h_t <- tgarch00_fit@fit$var
+
+resid_g <- (garch00_fit@fit$residuals - mu_g)
+resid_e <- (egarch00_fit@fit$residuals - mu_e)
+resid_t <- (tgarch00_fit@fit$residuals - mu_t)
+
+resid_g_std <- resid_g/h_g^0.5
+resid_e_std <- resid_e/h_e^0.5
+resid_t_std <- resid_t/h_t^0.5
 
